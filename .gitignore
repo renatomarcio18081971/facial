@@ -1,0 +1,23 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/teste-facial/bin/Debug/net9.0-windows/teste-facial.exe
+/teste-facial/bin/Debug/net9.0-windows/teste-facial.pdb
+/teste-facial/bin/Debug/net9.0-windows/teste-facial.dll
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.AssemblyInfo.cs
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.AssemblyInfoInputs.cache
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.csproj.CoreCompileInputs.cache
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.csproj.FileListAbsolute.txt
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.csproj.GenerateResource.cache
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.dll
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.pdb
+/teste-facial/obj/Debug/net9.0-windows/teste-facial.sourcelink.json
+/teste-facial/obj/Debug/net9.0-windows/teste_facial.Form1.resources
+/teste-facial/obj/Debug/net9.0-windows/teste_facial.frmCapturaFoto.resources
+/teste-facial/obj/Debug/net9.0-windows/apphost.exe
+/teste-facial/obj/Debug/net9.0-windows/ref/teste-facial.dll
+/teste-facial/obj/Debug/net9.0-windows/refint/teste-facial.dll
+/teste-facial/obj
+/teste-facial/bin/Debug/net9.0-windows
