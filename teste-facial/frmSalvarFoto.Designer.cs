@@ -31,6 +31,7 @@
             pictureBox1 = new PictureBox();
             btnCapturarImagem = new Button();
             lblmensaem = new Label();
+            btnReconhecer = new Button();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -49,24 +50,35 @@
             btnCapturarImagem.Name = "btnCapturarImagem";
             btnCapturarImagem.Size = new Size(703, 29);
             btnCapturarImagem.TabIndex = 4;
-            btnCapturarImagem.Text = "Tirar Foto";
+            btnCapturarImagem.Text = "Cadastrar";
             btnCapturarImagem.UseVisualStyleBackColor = true;
             btnCapturarImagem.Click += btnCapturarImagem_Click;
             // 
             // lblmensaem
             // 
             lblmensaem.AutoSize = true;
-            lblmensaem.Location = new Point(31, 564);
+            lblmensaem.Location = new Point(31, 589);
             lblmensaem.Name = "lblmensaem";
             lblmensaem.Size = new Size(90, 20);
             lblmensaem.TabIndex = 5;
             lblmensaem.Text = "lblmensaem";
+            // 
+            // btnReconhecer
+            // 
+            btnReconhecer.Location = new Point(31, 534);
+            btnReconhecer.Name = "btnReconhecer";
+            btnReconhecer.Size = new Size(703, 29);
+            btnReconhecer.TabIndex = 6;
+            btnReconhecer.Text = "Reconhecer/Assinar";
+            btnReconhecer.UseVisualStyleBackColor = true;
+            btnReconhecer.Click += btnReconhecer_Click;
             // 
             // frmCapturaFoto
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(764, 618);
+            Controls.Add(btnReconhecer);
             Controls.Add(lblmensaem);
             Controls.Add(btnCapturarImagem);
             Controls.Add(pictureBox1);
@@ -86,5 +98,6 @@
         private Button btnIniciarCamera;
         private Button btnCapturarImagem;
         private Label lblmensaem;
+        private Button btnReconhecer;
     }
 }

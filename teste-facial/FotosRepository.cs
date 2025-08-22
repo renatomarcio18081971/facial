@@ -1,20 +1,15 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Configuration;
-using System.Security.Cryptography;
-using teste_facial.Services;
 
 namespace teste_facial
 {
-    public class SalvarDadosFoto
+    public class FotosRepository
     {
-        private readonly IDatabaseService _dbService;
         private string _conexao;
 
-        public SalvarDadosFoto(IDatabaseService dbService)
+        public FotosRepository()
         {
-            _dbService = dbService;
-            _conexao = _dbService.GetConnectionString();
+            _conexao = Configuracao.ConnectionString;
         }
 
         public bool Salvar(string imagePath, string descriptor, string codigo)
@@ -39,7 +34,7 @@ namespace teste_facial
         {
             using var db = new SqlConnection(_conexao);
             db.Open();
-            var _sql = $@" select ImagePath, Descriptor from FaceDescriptors where codigo = @codigo";
+            var _sql = $@" select ImagePath, Descriptor from FaceDescriptors";
             var retorno = db.Query<Pessoa>(_sql);
             return retorno;
         }
