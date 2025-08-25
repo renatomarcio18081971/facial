@@ -32,6 +32,7 @@
             btnCapturarImagem = new Button();
             lblmensaem = new Label();
             btnReconhecer = new Button();
+            progressBar1 = new ProgressBar();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -73,11 +74,19 @@
             btnReconhecer.UseVisualStyleBackColor = true;
             btnReconhecer.Click += btnReconhecer_Click;
             // 
+            // progressBar1
+            // 
+            progressBar1.Location = new Point(31, 622);
+            progressBar1.Name = "progressBar1";
+            progressBar1.Size = new Size(703, 29);
+            progressBar1.TabIndex = 7;
+            // 
             // frmCapturaFoto
             // 
             AutoScaleDimensions = new SizeF(8F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(764, 618);
+            ClientSize = new Size(764, 673);
+            Controls.Add(progressBar1);
             Controls.Add(btnReconhecer);
             Controls.Add(lblmensaem);
             Controls.Add(btnCapturarImagem);
@@ -99,5 +108,6 @@
         private Button btnCapturarImagem;
         private Label lblmensaem;
         private Button btnReconhecer;
+        private ProgressBar progressBar1;
     }
 }
