@@ -96,6 +96,7 @@
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Salvar foto";
             FormClosing += frmCapturaFoto_FormClosing;
+            FormClosed += frmCapturaFoto_FormClosed;
             Load += frmCapturaFoto_Load;
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);

@@ -40,8 +40,7 @@ namespace teste_facial
             }
             detector.Dispose();
             facerec.Dispose();
-            sp.Dispose();
-            IniciarCamera();
+            sp.Dispose();            
         }
 
         private float CompareDescriptors(Matrix<float> d1, Matrix<float> d2)
@@ -87,24 +86,24 @@ namespace teste_facial
 
         private void btnCapturarImagem_Click(object sender, EventArgs e)
         {
+            IniciarCamera();
+            progressBar1.Value = 0;
+            progressBar1.Maximum = 100;
             try
             {
                 if (pictureBox1.Image != null)
                 {
+                    progressBar1.Value = 25;
                     lblmensaem.Text = "Validando foto";
                     idAssinatura = Guid.NewGuid();
-                    Bitmap imagemCapturada;
-                    try
+                    Bitmap imagemCapturada = new Bitmap((Image)pictureBox1.Image.Clone());
+                    if (pictureBox1.Image == null)
                     {
-                        imagemCapturada = new Bitmap(pictureBox1.Image);
+                        progressBar1.Value = 0;
+                        MessageBox.Show("Nenhuma imagem capturada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
                     }
-                    catch (Exception)
-                    {
-                        lblmensaem.Text = string.Empty;
-                        FinalizarCamera();
-                        MessageBox.Show("Centralize o rosto dentro da figura oval.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        throw;
-                    }
+
                     imagemCapturada.Save(string.Concat(idAssinatura.ToString(), ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
                     if (fonteVideo != null && fonteVideo.IsRunning)
                     {
@@ -116,12 +115,13 @@ namespace teste_facial
                     var faces = detector.Operator(img);
                     if (faces.Length == 0)
                     {
+                        progressBar1.Value = 0;
                         lblmensaem.Text = string.Empty;
                         FinalizarCamera();
                         MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
-
+                    progressBar1.Value = 50;
                     lblmensaem.Text = "Salvando foto";
                     var shape = sp.Detect(img, faces[0]);
                     var chipDetail = Dlib.GetFaceChipDetails(shape, 150, 0.25);
@@ -139,25 +139,32 @@ namespace teste_facial
                     var image = pessoa?.ImagePath;
                     var valores = pessoa?.Descriptor.Split(',').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
                     var matriz = new Matrix<float>(128, 1);
-                    if (valores == null) throw new Exception("Valores não foram localizados !");
+                    if (valores == null)
+                    {
+                        progressBar1.Value = 0;
+                        MessageBox.Show("Valores não foram localizados !", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
                     for (int i = 0; i < valores.Length; i++)
                     {
                         matriz[i] = valores[i];
                     }
                     if (pessoa == null)
                     {
+                        progressBar1.Value = 0;
                         lblmensaem.Text = string.Empty;
                         FinalizarCamera();
                         MessageBox.Show("Erro ao carregar foto salva, verifique", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     fotoSalva.Add(pessoa.ImagePath, matriz);
-
+                    progressBar1.Value = 75;
                     //Compara foto salva no banco se nao comparar apaga o registro no banco                
                     using var imgComparacao = Dlib.LoadImage<RgbPixel>(string.Concat(idAssinatura.ToString(), ".jpg"));
                     var facesComparacao = detector.Operator(imgComparacao);
                     if (facesComparacao.Length == 0)
                     {
+                        progressBar1.Value = 0;
                         lblmensaem.Text = string.Empty;
                         FinalizarCamera();
                         MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -184,11 +191,12 @@ namespace teste_facial
                     }
                     if (menorDistancia > 0.65f)
                     {
+                        progressBar1.Value = 0;
                         lblmensaem.Text = string.Empty;
                         FinalizarCamera();
                         MessageBox.Show("Falha na validação durante o processo, favor repetir", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        _foto.ApagarFoto(idAssinatura.ToString());
                     }
+                    progressBar1.Value = 100;
                     FinalizarCamera();
                     lblmensaem.Text = "Processo finalizado";
                     MessageBox.Show("Processo finalizado !", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -213,6 +221,7 @@ namespace teste_facial
             {
                 fonteVideo.SignalToStop();
                 fonteVideo.WaitForStop();
+                fonteVideo = null;
             }
         }
 
@@ -223,73 +232,89 @@ namespace teste_facial
 
         private async Task ReconhecerRostoAsync()
         {
-            progressBar1.Value = 0;
-            lblmensaem.Text = "Iniciando reconhecimento...";
-            var listaDePessoas = await Task.Run(() => _foto.ObterTodos());
-            if (listaDePessoas.ToList().Count == 0) 
+            try
             {
-                MessageBox.Show("Não existe foto cadastrada para fazer reconhecimento.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            progressBar1.Maximum = listaDePessoas.ToList().Count;
-            var listaDeFotosConcurrent = new ConcurrentDictionary<string, Matrix<float>>();
-            int progresso = 0;
-            await Task.Run(() =>
-            {
-                Parallel.ForEach(listaDePessoas, pessoa =>
+                if (pictureBox1.Image != null)
                 {
-                    if (pessoa?.Descriptor == null) return;
-                    var valores = pessoa.Descriptor.Split(',')
-                        .Select(s => float.Parse(s, CultureInfo.InvariantCulture))
-                        .ToArray();
-                    if (valores.Length != 128) return;
-                    var matriz = new Matrix<float>(128, 1);
-                    for (int i = 0; i < valores.Length; i++)
-                        matriz[i] = valores[i];
-                    listaDeFotosConcurrent.TryAdd(pessoa.ImagePath, matriz);
-                    int atual = Interlocked.Increment(ref progresso);
-                    Invoke(new Action(() =>
+                    idArquivo = Guid.NewGuid();
+                    Bitmap imagemCapturada;
+                    try
                     {
-                        progressBar1.Value = atual;
-                        lblmensaem.Text = $"Carregando: {atual * 100 / progressBar1.Maximum}%";
-                    }));
-                });
-            });
-            lblmensaem.Text = "Comparando rostos...";
-            progressBar1.Value = 0;
-            progressBar1.Maximum = listaDeFotosConcurrent.Count;
-            string melhorCorrespondencia = string.Empty;
-            float menorDistancia = float.MaxValue;
-            object lockObj = new object();
-            int progressoComparacao = 0;
-            await Task.Run(() =>
-            {
-                Parallel.ForEach(listaDeFotosConcurrent, kvp =>
-                {
-                    float distancia = CompareDescriptors(novoVetor, kvp.Value);
-                    lock (lockObj)
+                        imagemCapturada = new Bitmap(pictureBox1.Image);
+                    }
+                    catch (Exception)
                     {
+                        FinalizarCamera();
+                        MessageBox.Show("Centralize o rosto dentro da figura oval.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        throw;
+                    }
+                    imagemCapturada.Save(string.Concat(idArquivo.ToString(), ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
+
+                    var listaDePessoas = _foto.ObterTodos();
+                    foreach (var pessoa in listaDePessoas)
+                    {
+                        var image = pessoa?.ImagePath;
+                        var valores = pessoa?.Descriptor.Split(',').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+                        var matriz = new Matrix<float>(128, 1);
+                        if (valores == null) throw new Exception("Valores não foram localizados !");
+                        for (int i = 0; i < valores.Length; i++)
+                        {
+                            matriz[i] = valores[i];
+                        }
+                        if (pessoa == null)
+                        {
+                            FinalizarCamera();
+                            MessageBox.Show("Erro ao carregar foto salva, verifique", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        listaDeFotos.Add(pessoa.ImagePath, matriz);
+                    }
+
+
+                    using var img = Dlib.LoadImage<RgbPixel>(string.Concat(idArquivo.ToString(), ".jpg"));
+                    var faces = detector.Operator(img);
+                    if (faces.Length == 0)
+                    {
+                        MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    var shape = sp.Detect(img, faces[0]);
+                    var chipDetail = Dlib.GetFaceChipDetails(shape, 150, 0.25);
+                    using var faceChip = Dlib.ExtractImageChip<RgbPixel>(img, chipDetail);
+                    var matrix = new Matrix<RgbPixel>(faceChip);
+                    var descriptors = facerec.Operator(matrix);
+                    var novoVetor = descriptors[0];
+                    var vetoresSalvos = listaDeFotos;
+                    string melhorCorrespondencia = string.Empty;
+                    float menorDistancia = float.MaxValue;
+                    foreach (var (nome, vetorSalvo) in vetoresSalvos)
+                    {
+                        float distancia = CompareDescriptors(novoVetor, vetorSalvo);
                         if (distancia < menorDistancia)
                         {
                             menorDistancia = distancia;
-                            melhorCorrespondencia = kvp.Key;
+                            melhorCorrespondencia = nome;
                         }
                     }
-                    int atual = Interlocked.Increment(ref progressoComparacao);
-                    Invoke(new Action(() =>
-                    {
-                        progressBar1.Value = atual;
-                        lblmensaem.Text = $"Comparando: {atual * 100 / progressBar1.Maximum}%";
-                    }));
-                });
-            });
-            lblmensaem.Text = "Processo concluído.";
-            progressBar1.Value = progressBar1.Maximum;
-            if (menorDistancia < 0.65f)
-                MessageBox.Show($"Rosto reconhecido: {melhorCorrespondencia} (distância: {menorDistancia:F4})");
-            else
-                MessageBox.Show("Rosto não reconhecido.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            FinalizarCamera();
+                    if (menorDistancia < 0.65f)
+                        MessageBox.Show($"Rosto reconhecido: {melhorCorrespondencia} (distância: {menorDistancia:F4})");
+                    else
+                        MessageBox.Show("Rosto não reconhecido.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    listaDeFotos = [];
+                    FinalizarCamera();
+                }
+            }
+            finally
+            {
+                listaDeFotos = [];
+                FinalizarCamera();
+            }
+
+        }
+
+        private void frmCapturaFoto_FormClosed(object sender, FormClosedEventArgs e)
+        {
+           
         }
     }
 }
