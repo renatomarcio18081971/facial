@@ -61,6 +61,8 @@ namespace teste_facial
                 MessageBox.Show("Nenhuma câmera encontrada.");
                 return;
             }
+            if (fonteVideo != null && fonteVideo.IsRunning)
+                return;
             fonteVideo = new VideoCaptureDevice(dispositivosVideo[0].MonikerString);
             fonteVideo.NewFrame += new NewFrameEventHandler(Video_NewFrame);
             fonteVideo.Start();
@@ -86,116 +88,115 @@ namespace teste_facial
 
         private void btnCapturarImagem_Click(object sender, EventArgs e)
         {
-            try
+            for (int t = 0; t < 1000; t++)
             {
-                if (pictureBox1.Image != null)
+                progressBar1.Value = 0;
+                progressBar1.Maximum = 100;
+                try
                 {
-                    lblmensaem.Text = "Validando foto";
-                    idAssinatura = Guid.NewGuid();
-                    Bitmap imagemCapturada;
-                    try
+                    if (pictureBox1.Image != null)
                     {
-                        imagemCapturada = new Bitmap(pictureBox1.Image);
-                    }
-                    catch (Exception)
-                    {
-                        lblmensaem.Text = string.Empty;
-                        FinalizarCamera();
-                        MessageBox.Show("Centralize o rosto dentro da figura oval.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        throw;
-                    }
-                    imagemCapturada.Save(string.Concat(idAssinatura.ToString(), ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
-                    if (fonteVideo != null && fonteVideo.IsRunning)
-                    {
-                        fonteVideo.SignalToStop();
-                        fonteVideo.WaitForStop();
-                    }
-                    string imagePath = string.Concat(idAssinatura.ToString(), ".jpg");
-                    using var img = Dlib.LoadImage<RgbPixel>(imagePath);
-                    var faces = detector.Operator(img);
-                    if (faces.Length == 0)
-                    {
-                        lblmensaem.Text = string.Empty;
-                        FinalizarCamera();
-                        MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-
-                    lblmensaem.Text = "Salvando foto";
-                    var shape = sp.Detect(img, faces[0]);
-                    var chipDetail = Dlib.GetFaceChipDetails(shape, 150, 0.25);
-                    using var faceChip = Dlib.ExtractImageChip<RgbPixel>(img, chipDetail);
-                    var matrix = new Matrix<RgbPixel>(faceChip);
-                    var descriptors = facerec.Operator(matrix);
-                    var faceDescriptor = descriptors[0];
-                    var descriptorText = string.Join(",", faceDescriptor.ToArray().Select(f => f.ToString(CultureInfo.InvariantCulture)));
-                    _foto.Salvar(imagePath, descriptorText, string.Concat(idAssinatura.ToString()));
-
-
-                    //Carregar vetor de foto salva no banco
-                    lblmensaem.Text = "Validando estrutura foto";
-                    var pessoa = _foto.Obter(string.Concat(idAssinatura.ToString()));
-                    var image = pessoa?.ImagePath;
-                    var valores = pessoa?.Descriptor.Split(',').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
-                    var matriz = new Matrix<float>(128, 1);
-                    if (valores == null) throw new Exception("Valores não foram localizados !");
-                    for (int i = 0; i < valores.Length; i++)
-                    {
-                        matriz[i] = valores[i];
-                    }
-                    if (pessoa == null)
-                    {
-                        lblmensaem.Text = string.Empty;
-                        FinalizarCamera();
-                        MessageBox.Show("Erro ao carregar foto salva, verifique", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
-                    }
-                    fotoSalva.Add(pessoa.ImagePath, matriz);
-
-                    //Compara foto salva no banco se nao comparar apaga o registro no banco                
-                    using var imgComparacao = Dlib.LoadImage<RgbPixel>(string.Concat(idAssinatura.ToString(), ".jpg"));
-                    var facesComparacao = detector.Operator(imgComparacao);
-                    if (facesComparacao.Length == 0)
-                    {
-                        lblmensaem.Text = string.Empty;
-                        FinalizarCamera();
-                        MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        _foto.ApagarFoto(idAssinatura.ToString());
-                        return;
-                    }
-                    var shapeComparacao = sp.Detect(imgComparacao, facesComparacao[0]);
-                    var chipDetailComparacao = Dlib.GetFaceChipDetails(shapeComparacao, 150, 0.25);
-                    using var faceChipComparacao = Dlib.ExtractImageChip<RgbPixel>(imgComparacao, chipDetailComparacao);
-                    var matrixComparacao = new Matrix<RgbPixel>(faceChipComparacao);
-                    var descriptorsComparacao = facerec.Operator(matrixComparacao);
-                    var novoVetor = descriptorsComparacao[0];
-                    var vetoresSalvos = fotoSalva;
-                    string melhorCorrespondencia = string.Empty;
-                    float menorDistancia = float.MaxValue;
-                    foreach (var (nome, vetorSalvo) in vetoresSalvos)
-                    {
-                        float distancia = CompareDescriptors(novoVetor, vetorSalvo);
-                        if (distancia < menorDistancia)
+                        lblmensaem.Text = "Validando foto";
+                        idAssinatura = Guid.NewGuid();
+                        Bitmap imagemCapturada = new((Image)pictureBox1.Image.Clone());
+                        if (pictureBox1.Image == null)
                         {
-                            menorDistancia = distancia;
-                            melhorCorrespondencia = nome;
+                            progressBar1.Value = 0;
+                            MessageBox.Show("Nenhuma imagem capturada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
                         }
-                    }
-                    if (menorDistancia > 0.65f)
-                    {
-                        lblmensaem.Text = string.Empty;
+                        imagemCapturada.Save(string.Concat(idAssinatura.ToString(), ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
+                        string imagePath = string.Concat(idAssinatura.ToString(), ".jpg");
+                        using var img = Dlib.LoadImage<RgbPixel>(imagePath);
+                        var faces = detector.Operator(img);
+                        if (faces.Length == 0)
+                        {
+                            progressBar1.Value = 0;
+                            lblmensaem.Text = string.Empty;
+                            FinalizarCamera();
+                            MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+                        progressBar1.Value = 25;
+                        lblmensaem.Text = "Salvando foto";
+                        var shape = sp.Detect(img, faces[0]);
+                        var chipDetail = Dlib.GetFaceChipDetails(shape, 150, 0.25);
+                        using var faceChip = Dlib.ExtractImageChip<RgbPixel>(img, chipDetail);
+                        var matrix = new Matrix<RgbPixel>(faceChip);
+                        var descriptors = facerec.Operator(matrix);
+                        var faceDescriptor = descriptors[0];
+                        var descriptorText = string.Join(",", faceDescriptor.ToArray().Select(f => f.ToString(CultureInfo.InvariantCulture)));
+                        _foto.Salvar(imagePath, descriptorText, string.Concat(idAssinatura.ToString()));
+
+                        progressBar1.Value = 50;
+                        //Carregar vetor de foto salva no banco
+                        lblmensaem.Text = "Validando estrutura foto";
+                        var pessoa = _foto.Obter(string.Concat(idAssinatura.ToString()));
+                        var image = pessoa?.ImagePath;
+                        var valores = pessoa?.Descriptor.Split(',').Select(s => float.Parse(s, CultureInfo.InvariantCulture)).ToArray();
+                        var matriz = new Matrix<float>(128, 1);
+                        if (valores == null) throw new Exception("Valores não foram localizados !");
+                        for (int i = 0; i < valores.Length; i++)
+                        {
+                            matriz[i] = valores[i];
+                        }
+                        if (pessoa == null)
+                        {
+                            progressBar1.Value = 0;
+                            lblmensaem.Text = string.Empty;
+                            FinalizarCamera();
+                            MessageBox.Show("Erro ao carregar foto salva, verifique", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
+                        fotoSalva.Add(pessoa.ImagePath, matriz);
+                        progressBar1.Value = 75;
+                        //Compara foto salva no banco se nao comparar apaga o registro no banco                
+                        using var imgComparacao = Dlib.LoadImage<RgbPixel>(string.Concat(idAssinatura.ToString(), ".jpg"));
+                        var facesComparacao = detector.Operator(imgComparacao);
+                        if (facesComparacao.Length == 0)
+                        {
+                            progressBar1.Value = 0;
+                            lblmensaem.Text = string.Empty;
+                            FinalizarCamera();
+                            MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            _foto.ApagarFoto(idAssinatura.ToString());
+                            return;
+                        }
+                        var shapeComparacao = sp.Detect(imgComparacao, facesComparacao[0]);
+                        var chipDetailComparacao = Dlib.GetFaceChipDetails(shapeComparacao, 150, 0.25);
+                        using var faceChipComparacao = Dlib.ExtractImageChip<RgbPixel>(imgComparacao, chipDetailComparacao);
+                        var matrixComparacao = new Matrix<RgbPixel>(faceChipComparacao);
+                        var descriptorsComparacao = facerec.Operator(matrixComparacao);
+                        var novoVetor = descriptorsComparacao[0];
+                        var vetoresSalvos = fotoSalva;
+                        string melhorCorrespondencia = string.Empty;
+                        float menorDistancia = float.MaxValue;
+                        foreach (var (nome, vetorSalvo) in vetoresSalvos)
+                        {
+                            float distancia = CompareDescriptors(novoVetor, vetorSalvo);
+                            if (distancia < menorDistancia)
+                            {
+                                menorDistancia = distancia;
+                                melhorCorrespondencia = nome;
+                            }
+                        }
+                        if (menorDistancia > 0.65f)
+                        {
+                            progressBar1.Value = 0;
+                            lblmensaem.Text = string.Empty;
+                            FinalizarCamera();
+                            MessageBox.Show("Falha na validação durante o processo, favor repetir", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        progressBar1.Value = 100;
                         FinalizarCamera();
-                        MessageBox.Show("Falha na validação durante o processo, favor repetir", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        _foto.ApagarFoto(idAssinatura.ToString());
+                        lblmensaem.Text = "Processo finalizado";
+                        //MessageBox.Show("Processo finalizado !", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    FinalizarCamera();
-                    lblmensaem.Text = "Processo finalizado";
-                    MessageBox.Show("Processo finalizado !", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-            }
-            finally
-            {
-                FinalizarCamera();
+                finally
+                {
+                    FinalizarCamera();
+                }
             }
         }
 
@@ -206,35 +207,56 @@ namespace teste_facial
             lblmensaem.Width = this.ClientSize.Width;
         }
 
+        private void EncerrarCamera()
+        {
+            try
+            {
+                if (fonteVideo != null)
+                {
+                    if (fonteVideo.IsRunning)
+                    {
+                        fonteVideo.SignalToStop();
+                        fonteVideo.WaitForStop();
+                    }
+
+                    fonteVideo = null;
+                }
+
+                if (pictureBox1.Image != null)
+                {
+                    pictureBox1.Image.Dispose();
+                    pictureBox1.Image = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Erro ao encerrar a câmera: " + ex.Message);
+            }
+        }
+
         private void frmCapturaFoto_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (fonteVideo != null && fonteVideo.IsRunning)
-            {
-                fonteVideo.SignalToStop();
-                fonteVideo.WaitForStop();
-            }
+            EncerrarCamera();
         }
 
         private void btnReconhecer_Click(object sender, EventArgs e)
         {
             try
             {
+                progressBar1.Value = 0;
+                progressBar1.Maximum = 100;
                 if (pictureBox1.Image != null)
                 {
                     idArquivo = Guid.NewGuid();
-                    Bitmap imagemCapturada;
-                    try
+                    Bitmap imagemCapturada = new Bitmap((Image)pictureBox1.Image.Clone());
+                    if (pictureBox1.Image == null)
                     {
-                        imagemCapturada = new Bitmap(pictureBox1.Image);
-                    }
-                    catch (Exception)
-                    {
-                        FinalizarCamera();
-                        MessageBox.Show("Centralize o rosto dentro da figura oval.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        throw;
+                        progressBar1.Value = 0;
+                        MessageBox.Show("Nenhuma imagem capturada.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
                     }
                     imagemCapturada.Save(string.Concat(idArquivo.ToString(), ".jpg"), System.Drawing.Imaging.ImageFormat.Jpeg);
-
+                    progressBar1.Value = 25;
                     var listaDePessoas = _foto.ObterTodos();
                     foreach (var pessoa in listaDePessoas)
                     {
@@ -248,13 +270,14 @@ namespace teste_facial
                         }
                         if (pessoa == null)
                         {
+                            progressBar1.Value = 25;
                             FinalizarCamera();
                             MessageBox.Show("Erro ao carregar foto salva, verifique", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             return;
                         }
                         listaDeFotos.Add(pessoa.ImagePath, matriz);
                     }
-
+                    progressBar1.Value = 50;
 
                     using var img = Dlib.LoadImage<RgbPixel>(string.Concat(idArquivo.ToString(), ".jpg"));
                     var faces = detector.Operator(img);
@@ -263,6 +286,7 @@ namespace teste_facial
                         MessageBox.Show("Nenhum rosto detectado.", "Informação", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
+                    progressBar1.Value = 75;
                     var shape = sp.Detect(img, faces[0]);
                     var chipDetail = Dlib.GetFaceChipDetails(shape, 150, 0.25);
                     using var faceChip = Dlib.ExtractImageChip<RgbPixel>(img, chipDetail);
@@ -281,6 +305,7 @@ namespace teste_facial
                             melhorCorrespondencia = nome;
                         }
                     }
+                    progressBar1.Value = 100;
                     if (menorDistancia < 0.65f)
                         MessageBox.Show($"Rosto reconhecido: {melhorCorrespondencia} (distância: {menorDistancia:F4})");
                     else
